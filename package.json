@@ -1,0 +1,28 @@
+{
+  "name": "el-pirata-david",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "db:generate": "cd apps/api && npx prisma generate",
+    "db:push": "cd apps/api && npx prisma db push",
+    "db:migrate": "cd apps/api && npx prisma migrate dev",
+    "db:studio": "cd apps/api && npx prisma studio"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0",
+    "prettier": "^3.5.0",
+    "typescript": "^5.8.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "packageManager": "npm@11.11.0"
+}
