@@ -15,8 +15,10 @@ import {
   Menu,
   X,
   LogOut,
+  Wrench,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
@@ -29,12 +31,16 @@ const NAV_ITEMS = [
   { href: '/admin/reports', label: 'Reportes', icon: BarChart3 },
 ];
 
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+const DEMO_USER = { name: 'Demo Admin', email: 'admin@demo.com' };
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { isAdmin, isLoading, user, logout } = useAuth();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const displayUser = DEMO_MODE ? DEMO_USER : user;
 
-  if (isLoading) {
+  if (isLoading && !DEMO_MODE) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -42,7 +48,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  if (!isAdmin || !user) {
+  if ((!isAdmin || !user) && !DEMO_MODE) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-4">
@@ -78,6 +84,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             >
               <X className="h-5 w-5" />
             </button>
+            {DEMO_MODE && (
+              <Badge variant="outline" className="ml-2 text-xs">
+                <Wrench className="h-3 w-3 mr-1" />
+                DEMO
+              </Badge>
+            )}
           </div>
 
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -106,17 +118,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="p-4 border-t">
             <div className="flex items-center gap-3 mb-3">
               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                {user.name.charAt(0)}
+                {displayUser.name.charAt(0)}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{user.name}</p>
-                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                <p className="text-sm font-medium truncate">{displayUser.name}</p>
+                <p className="text-xs text-muted-foreground truncate">{displayUser.email}</p>
               </div>
             </div>
-            <Button variant="outline" size="sm" className="w-full" onClick={logout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Cerrar Sesión
-            </Button>
+            {!DEMO_MODE && (
+              <Button variant="outline" size="sm" className="w-full" onClick={logout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Cerrar Sesión
+              </Button>
+            )}
           </div>
         </div>
       </aside>
@@ -137,6 +151,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Menu className="h-5 w-5" />
           </button>
           <span className="ml-3 font-semibold">Admin Panel</span>
+          {DEMO_MODE && (
+            <Badge variant="outline" className="ml-auto text-xs">
+              <Wrench className="h-3 w-3 mr-1" />
+              DEMO
+            </Badge>
+          )}
         </header>
 
         <main className="p-4 md:p-6 lg:p-8">{children}</main>

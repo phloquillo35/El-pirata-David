@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { notFound, useParams } from 'next/navigation';
 import { Package, LogIn, ArrowLeft, ShoppingBag, MapPin, CreditCard } from 'lucide-react';
@@ -8,107 +9,77 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-context';
 import { formatPrice, cnFormat } from '@/lib/utils';
+import { api } from '@/lib/api';
+import type { IOrder, IOrderTracking, IAddress, IPayment } from '@el-pirata-david/shared';
 
-interface OrderItem {
-  id: string;
-  name: string;
-  quantity: number;
-  price: number;
-  image?: string;
-}
 
-interface TrackingEntry {
-  status: string;
-  date: Date;
-  description: string;
-}
-
-interface Order {
-  id: string;
-  orderNumber: string;
-  date: Date;
-  status: 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
-  type: 'STOCK' | 'IMPORT';
-  subtotal: number;
-  shipping: number;
-  tax: number;
-  total: number;
-  items: OrderItem[];
-  shippingAddress: {
-    name: string;
-    street: string;
-    city: string;
-    state: string;
-    phone: string;
-  };
-  payment: {
-    method: string;
-    reference: string;
-  };
-  tracking: TrackingEntry[];
-}
-
-const MOCK_ORDER: Order = {
-  id: '1',
-  orderNumber: 'EPD-2025-0001',
-  date: new Date('2025-05-15'),
-  status: 'DELIVERED',
-  type: 'STOCK',
-  subtotal: 456000,
-  shipping: 0,
-  tax: 45600,
-  total: 501600,
-  items: [
-    { id: 'i1', name: 'Auriculares Bluetooth Sony', quantity: 1, price: 350000 },
-    { id: 'i2', name: 'Cable USB-C 2m', quantity: 2, price: 53000 },
-  ],
-  shippingAddress: {
-    name: 'Juan Pérez',
-    street: 'Av. Mariscal López 1234',
-    city: 'Buenos Aires',
-    state: 'Central',
-    phone: '+54 11 5555 2345',
-  },
-  payment: {
-    method: 'Mercado Pago - Tarjeta de Crédito',
-    reference: 'MP-2025-000001',
-  },
-  tracking: [
-    { status: 'PENDING', date: new Date('2025-05-15'), description: 'Pedido recibido' },
-    { status: 'PROCESSING', date: new Date('2025-05-16'), description: 'Pedido en proceso de preparación' },
-    { status: 'SHIPPED', date: new Date('2025-05-17'), description: 'Pedido enviado al domicilio' },
-    { status: 'DELIVERED', date: new Date('2025-05-19'), description: 'Pedido entregado con éxito' },
-  ],
-};
 
 const statusVariant: Record<string, 'success' | 'warning' | 'default' | 'secondary' | 'destructive'> = {
   DELIVERED: 'success',
   SHIPPED: 'success',
   PROCESSING: 'warning',
+  CONFIRMED: 'warning',
   PENDING: 'secondary',
   CANCELLED: 'destructive',
+  REFUNDED: 'destructive',
 };
 
 const statusLabel: Record<string, string> = {
   DELIVERED: 'Entregado',
   SHIPPED: 'Enviado',
   PROCESSING: 'Procesando',
+  CONFIRMED: 'Confirmado',
   PENDING: 'Pendiente',
   CANCELLED: 'Cancelado',
+  REFUNDED: 'Reintegrado',
 };
 
 const typeLabel: Record<string, string> = {
   STOCK: 'Stock Propio',
-  IMPORT: 'Importado',
+  LINK_REQUEST: 'Importado',
 };
+
+interface OrderDetail extends IOrder {
+  shippingAddress: IAddress | null;
+  payments: IPayment[];
+  tracking: IOrderTracking[];
+}
 
 export default function OrderDetailPage() {
   const params = useParams();
   const id = params.id as string;
-  const { isAuthenticated, isLoading } = useAuth();
-  const order: Order | undefined = MOCK_ORDER.id === id ? MOCK_ORDER : undefined;
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [order, setOrder] = useState<OrderDetail | null>(null);
+  const [tracking, setTracking] = useState<IOrderTracking[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
 
-  if (isLoading) {
+  useEffect(() => {
+    let cancelled = false;
+    async function loadOrder() {
+      if (!isAuthenticated) return;
+      setIsLoading(true);
+      setFetchError(null);
+      try {
+        const data = await api.get<OrderDetail>(`/orders/${id}`);
+        if (cancelled) return;
+        setOrder(data);
+        if (cancelled) return;
+        setTracking(data.tracking ?? []);
+      } catch (err) {
+        if (!cancelled) {
+          setFetchError(err instanceof Error ? err.message : 'Error al cargar el pedido');
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+    loadOrder();
+    return () => { cancelled = true; };
+  }, [id, isAuthenticated, retryKey]);
+
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -132,6 +103,27 @@ export default function OrderDetailPage() {
     );
   }
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <Package className="h-24 w-24 text-muted-foreground mb-6" />
+        <h1 className="text-2xl font-bold mb-2">Error al cargar el pedido</h1>
+        <p className="text-muted-foreground mb-8">{fetchError}</p>
+        <Button onClick={() => setRetryKey((k) => k + 1)} variant="outline">
+          Reintentar
+        </Button>
+      </div>
+    );
+  }
+
   if (!order) {
     notFound();
     return null;
@@ -147,7 +139,7 @@ export default function OrderDetailPage() {
         </Button>
         <div className="flex-1">
           <h1 className="text-3xl font-bold">Pedido {order.orderNumber}</h1>
-          <p className="text-muted-foreground">{cnFormat(order.date)}</p>
+          <p className="text-muted-foreground">{cnFormat(order.createdAt)}</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="secondary">{typeLabel[order.type]}</Badge>
@@ -173,10 +165,10 @@ export default function OrderDetailPage() {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{item.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {formatPrice(item.price)} x {item.quantity}
+                      {formatPrice(item.unitPrice)} x {item.quantity}
                     </p>
                   </div>
-                  <p className="font-medium">{formatPrice(item.price * item.quantity)}</p>
+                  <p className="font-medium">{formatPrice(item.totalPrice)}</p>
                 </div>
               ))}
             </CardContent>
@@ -190,10 +182,10 @@ export default function OrderDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-1 text-sm">
-              <p className="font-medium">{order.shippingAddress.name}</p>
-              <p className="text-muted-foreground">{order.shippingAddress.street}</p>
-              <p className="text-muted-foreground">{order.shippingAddress.city}, {order.shippingAddress.state}</p>
-              <p className="text-muted-foreground">{order.shippingAddress.phone}</p>
+              <p className="font-medium">{order.shippingAddress?.fullName ?? 'Sin dirección'}</p>
+              <p className="text-muted-foreground">{order.shippingAddress?.street ?? ''}</p>
+              <p className="text-muted-foreground">{order.shippingAddress?.city ?? ''}{order.shippingAddress?.state ? `, ${order.shippingAddress.state}` : ''}</p>
+              <p className="text-muted-foreground">{order.shippingAddress?.phone ?? ''}</p>
             </CardContent>
           </Card>
 
@@ -205,8 +197,8 @@ export default function OrderDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-1 text-sm">
-              <p className="text-muted-foreground">{order.payment.method}</p>
-              <p className="text-muted-foreground">Referencia: {order.payment.reference}</p>
+              <p className="text-muted-foreground">{order.payments?.[0]?.method ?? 'Sin información'}</p>
+              <p className="text-muted-foreground">Referencia: {order.payments?.[0]?.transactionId ?? '-'}</p>
             </CardContent>
           </Card>
         </div>
@@ -223,7 +215,7 @@ export default function OrderDetailPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Envío</span>
-                <span>{order.shipping === 0 ? <span className="text-green-600 font-medium">GRATIS</span> : formatPrice(order.shipping)}</span>
+                <span>{order.shippingCost === 0 ? <span className="text-green-600 font-medium">GRATIS</span> : formatPrice(order.shippingCost)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Impuestos</span>
@@ -244,21 +236,21 @@ export default function OrderDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {order.tracking.map((entry, index) => (
+                {tracking.map((entry, index) => (
                   <div key={index} className="flex gap-3">
                     <div className="flex flex-col items-center">
                       <div className={`h-3 w-3 rounded-full border-2 ${
-                        index === order.tracking.length - 1
+                        index === tracking.length - 1
                           ? 'bg-primary border-primary'
                           : 'bg-background border-muted-foreground'
                       }`} />
-                      {index < order.tracking.length - 1 && (
+                      {index < tracking.length - 1 && (
                         <div className="w-0.5 flex-1 bg-border" />
                       )}
                     </div>
                     <div className="pb-4">
                       <p className="text-sm font-medium">{entry.description}</p>
-                      <p className="text-xs text-muted-foreground">{cnFormat(entry.date)}</p>
+                      <p className="text-xs text-muted-foreground">{cnFormat(entry.createdAt)}</p>
                     </div>
                   </div>
                 ))}

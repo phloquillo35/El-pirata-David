@@ -1,47 +1,49 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, ShieldCheck, Truck, CreditCard } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, ShieldCheck, Truck, CreditCard, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatPrice } from '@/lib/utils';
+import { useCart } from '@/lib/cart-context';
 
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image?: string;
-}
-
-const MOCK_ITEMS: CartItem[] = [
-  { id: '1', name: 'Auriculares Bluetooth', price: 350000, quantity: 1 },
-  { id: '2', name: 'Mouse Inalámbrico', price: 120000, quantity: 2 },
-  { id: '3', name: 'Teclado Mecánico RGB', price: 89000, quantity: 1 },
-];
+const SHIPPING_COST = 15000;
+const FREE_SHIPPING_THRESHOLD = 500000;
+const TAX_RATE = 0.1;
 
 export default function CartPage() {
-  const [items, setItems] = useState<CartItem[]>(MOCK_ITEMS);
-
-  const updateQuantity = (id: string, delta: number) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-          : item,
-      ),
-    );
-  };
-
-  const removeItem = (id: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
-  };
+  const { cart, isLoading, error, updateItem, removeItem: removeFromCart, refreshCart } = useCart();
+  const items = cart?.items ?? [];
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = subtotal >= 500000 ? 0 : 15000;
-  const tax = subtotal * 0.1;
+  const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
+  const tax = subtotal * TAX_RATE;
   const total = subtotal + shipping + tax;
+
+  if (isLoading && !cart) {
+    return (
+      <div className="container mx-auto py-24 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-24">
+        <div className="flex flex-col items-center justify-center text-center max-w-md mx-auto">
+          <div className="h-20 w-20 rounded-2xl bg-destructive/10 flex items-center justify-center mb-6">
+            <ShoppingBag className="h-10 w-10 text-destructive" />
+          </div>
+          <h1 className="text-2xl font-bold mb-2">Error al cargar el carrito</h1>
+          <p className="text-muted-foreground mb-8">{error}</p>
+          <Button variant="outline" onClick={refreshCart}>
+            Reintentar
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -74,7 +76,7 @@ export default function CartPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         <div className="lg:col-span-2 space-y-4">
           {items.map((item) => (
-            <div key={item.id} className="group rounded-xl border border-border/80 bg-card p-5 transition-all duration-300 hover:shadow-[0_8px_24px_-6px_rgba(0,0,0,0.06)]">
+            <div key={item.productId} className="group rounded-xl border border-border/80 bg-card p-5 transition-all duration-300 hover:shadow-[0_8px_24px_-6px_rgba(0,0,0,0.06)]">
               <div className="flex items-center gap-5">
                 <div className="h-20 w-20 rounded-xl bg-secondary flex items-center justify-center shrink-0">
                   <ShoppingBag className="h-8 w-8 text-muted-foreground/50" />
@@ -87,7 +89,7 @@ export default function CartPage() {
                 </div>
                 <div className="flex items-center border border-input rounded-lg">
                   <button
-                    onClick={() => updateQuantity(item.id, -1)}
+                    onClick={() => updateItem(item.productId, item.quantity - 1)}
                     disabled={item.quantity <= 1}
                     className="p-2 hover:bg-secondary transition-colors disabled:opacity-50 rounded-l-lg"
                   >
@@ -97,7 +99,8 @@ export default function CartPage() {
                     {item.quantity}
                   </span>
                   <button
-                    onClick={() => updateQuantity(item.id, 1)}
+                    onClick={() => updateItem(item.productId, item.quantity + 1)}
+                    disabled={item.quantity >= item.maxStock}
                     className="p-2 hover:bg-secondary transition-colors rounded-r-lg"
                   >
                     <Plus className="h-3.5 w-3.5" />
@@ -107,7 +110,7 @@ export default function CartPage() {
                   {formatPrice(item.price * item.quantity)}
                 </p>
                 <button
-                  onClick={() => removeItem(item.id)}
+                  onClick={() => removeFromCart(item.productId)}
                   className="p-2 text-muted-foreground/50 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -149,7 +152,7 @@ export default function CartPage() {
                   {shipping > 0 && (
                     <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                       <Truck className="h-3 w-3" />
-                      Envío gratis en pedidos mayores a {formatPrice(500000)}
+                      Envío gratis en pedidos mayores a {formatPrice(FREE_SHIPPING_THRESHOLD)}
                     </p>
                   )}
                   <div className="flex justify-between text-sm">

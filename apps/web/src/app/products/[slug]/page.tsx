@@ -1,29 +1,104 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ShoppingCart, Minus, Plus, PackageOpen, ArrowLeft, Truck, ShieldCheck, Headphones, Loader2, Check, ImageOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/lib/utils';
 import { useCart } from '@/lib/cart-context';
-import { MOCK_PRODUCTS, type MockProduct } from '@/lib/mock-products';
+import { api } from '@/lib/api';
+
+interface ProductDetail {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  price: number;
+  category: { id: string; name: string; slug: string };
+  categoryId: string;
+  brand?: string;
+  model?: string;
+  stock: number;
+  images: { url: string; alt?: string; order: number }[];
+  specifications: { name: string; value: string }[];
+  createdAt: string;
+}
 
 export default function ProductDetailPage() {
   const params = useParams();
   const slug = params.slug as string;
 
   const [quantity, setQuantity] = useState(1);
+  const [product, setProduct] = useState<ProductDetail | null>(null);
+  const [similarProducts, setSimilarProducts] = useState<ProductDetail[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
 
-  const product = useMemo(() => MOCK_PRODUCTS.find((p) => p.slug === slug), [slug]);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadProduct() {
+      setIsLoading(true);
+      setFetchError(null);
+      try {
+        const data = await api.get<ProductDetail>(`/products/${slug}`);
+        if (cancelled) return;
+        setProduct(data);
+        const similarRes = await api.get<{ data: ProductDetail[] }>('/products', {
+          categoryId: data.categoryId,
+          limit: 4,
+        });
+        if (cancelled) return;
+        setSimilarProducts(
+          similarRes.data.filter((p) => p.id !== data.id).slice(0, 3),
+        );
+      } catch (err) {
+        if (!cancelled) {
+          setFetchError(err instanceof Error ? err.message : 'Error al cargar el producto');
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+    loadProduct();
+    return () => { cancelled = true; };
+  }, [slug, retryKey]);
 
-  const similarProducts = useMemo(
-    () =>
-      product
-        ? MOCK_PRODUCTS.filter((p) => p.categoryId === product.categoryId && p.id !== product.id).slice(0, 3)
-        : [],
-    [product],
-  );
+  if (isLoading && !product) {
+    return (
+      <div className="container mx-auto pt-32 pb-20 text-center">
+        <div className="flex justify-center mb-6">
+          <div className="h-14 w-14 rounded-2xl bg-secondary flex items-center justify-center">
+            <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
+          </div>
+        </div>
+        <h2 className="text-lg font-medium mb-2">Cargando producto...</h2>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="container mx-auto pt-32 pb-20 text-center">
+        <div className="flex justify-center mb-6">
+          <div className="h-14 w-14 rounded-2xl bg-secondary flex items-center justify-center">
+            <PackageOpen className="h-6 w-6 text-muted-foreground" />
+          </div>
+        </div>
+        <h2 className="text-lg font-medium mb-2">Error al cargar el producto</h2>
+        <p className="text-sm text-muted-foreground mb-8">{fetchError}</p>
+        <Button variant="outline" onClick={() => setRetryKey((k) => k + 1)}>
+          Reintentar
+        </Button>
+        <div className="mt-4">
+          <Link href="/products">
+            <Button variant="ghost">Ver todos los productos</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -74,9 +149,9 @@ export default function ProductDetailPage() {
 
       <div className="grid md:grid-cols-2 gap-12 md:gap-20">
         <div className="aspect-square rounded-3xl bg-secondary/50 overflow-hidden">
-          {product.image ? (
+          {product.images[0]?.url ? (
             <img
-              src={product.image}
+              src={product.images[0]?.url}
               alt={product.name}
               className="w-full h-full object-cover"
             />
@@ -89,7 +164,7 @@ export default function ProductDetailPage() {
 
         <div className="flex flex-col justify-center">
           <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">
-            {product.category}
+            {product.category.name}
             {product.brand ? ` / ${product.brand}` : ''}
           </p>
 
@@ -206,9 +281,9 @@ export default function ProductDetailPage() {
             {similarProducts.map((sp) => (
               <Link key={sp.id} href={`/products/${sp.slug}`} className="group">
                 <div className="aspect-[4/5] rounded-2xl bg-secondary/50 overflow-hidden mb-4">
-                  {sp.image ? (
+                  {sp.images[0]?.url ? (
                     <img
-                      src={sp.image}
+                      src={sp.images[0]?.url}
                       alt={sp.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     />
@@ -221,7 +296,7 @@ export default function ProductDetailPage() {
                   )}
                 </div>
                 <div className="px-1 space-y-1">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">{sp.category}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">{sp.category.name}</p>
                   <p className="text-sm font-medium group-hover:opacity-60 transition-opacity">{sp.name}</p>
                   <p className="text-sm font-semibold tracking-tight">{formatPrice(sp.price)}</p>
                 </div>

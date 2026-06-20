@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Package, LogIn, ChevronDown, ChevronRight, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,100 +8,72 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-context';
 import { formatPrice, cnFormat } from '@/lib/utils';
+import { api } from '@/lib/api';
+import type { IOrder, PaginationMeta } from '@el-pirata-david/shared';
 
-interface OrderItem {
-  id: string;
-  name: string;
-  quantity: number;
-  price: number;
-}
 
-interface Order {
-  id: string;
-  orderNumber: string;
-  date: Date;
-  status: 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
-  total: number;
-  type: 'STOCK' | 'IMPORT';
-  items: OrderItem[];
-}
-
-const MOCK_ORDERS: Order[] = [
-  {
-    id: '1',
-    orderNumber: 'EPD-2025-0001',
-    date: new Date('2025-05-15'),
-    status: 'DELIVERED',
-    total: 456000,
-    type: 'STOCK',
-    items: [
-      { id: 'i1', name: 'Auriculares Bluetooth Sony', quantity: 1, price: 350000 },
-      { id: 'i2', name: 'Cable USB-C 2m', quantity: 2, price: 53000 },
-    ],
-  },
-  {
-    id: '2',
-    orderNumber: 'EPD-2025-0002',
-    date: new Date('2025-05-20'),
-    status: 'PROCESSING',
-    total: 890000,
-    type: 'IMPORT',
-    items: [
-      { id: 'i3', name: 'iPhone 15 Pro Case', quantity: 1, price: 450000 },
-      { id: 'i4', name: 'AirPods Pro 2', quantity: 1, price: 440000 },
-    ],
-  },
-  {
-    id: '3',
-    orderNumber: 'EPD-2025-0003',
-    date: new Date('2025-05-25'),
-    status: 'SHIPPED',
-    total: 250000,
-    type: 'STOCK',
-    items: [
-      { id: 'i5', name: 'Teclado Mecánico Redragon', quantity: 1, price: 250000 },
-    ],
-  },
-  {
-    id: '4',
-    orderNumber: 'EPD-2025-0004',
-    date: new Date('2025-05-28'),
-    status: 'PENDING',
-    total: 178000,
-    type: 'IMPORT',
-    items: [
-      { id: 'i6', name: 'Mouse Pad XXL', quantity: 1, price: 89000 },
-      { id: 'i7', name: 'Soporte para Monitor', quantity: 1, price: 89000 },
-    ],
-  },
-];
 
 const statusVariant: Record<string, 'success' | 'warning' | 'default' | 'secondary' | 'destructive'> = {
   DELIVERED: 'success',
   SHIPPED: 'success',
   PROCESSING: 'warning',
+  CONFIRMED: 'warning',
   PENDING: 'secondary',
   CANCELLED: 'destructive',
+  REFUNDED: 'destructive',
 };
 
 const statusLabel: Record<string, string> = {
   DELIVERED: 'Entregado',
   SHIPPED: 'Enviado',
   PROCESSING: 'Procesando',
+  CONFIRMED: 'Confirmado',
   PENDING: 'Pendiente',
   CANCELLED: 'Cancelado',
+  REFUNDED: 'Reintegrado',
 };
 
 const typeLabel: Record<string, string> = {
   STOCK: 'Stock Propio',
-  IMPORT: 'Importado',
+  LINK_REQUEST: 'Importado',
 };
 
 export default function OrdersPage() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [orders, setOrders] = useState<IOrder[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
 
-  if (isLoading) {
+  useEffect(() => {
+    let cancelled = false;
+    async function loadOrders() {
+      if (!isAuthenticated) return;
+      setIsLoading(true);
+      setFetchError(null);
+      try {
+        const res = await api.get<{ data: IOrder[]; meta: PaginationMeta }>('/orders', {
+          page: 1,
+          limit: 20,
+        });
+        if (cancelled) return;
+        setOrders(res.data);
+        setMeta(res.meta);
+      } catch (err) {
+        if (!cancelled) {
+          setFetchError(err instanceof Error ? err.message : 'Error al cargar los pedidos');
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+    loadOrders();
+    return () => { cancelled = true; };
+  }, [isAuthenticated, retryKey]);
+
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -125,6 +97,27 @@ export default function OrdersPage() {
     );
   }
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <Package className="h-24 w-24 text-muted-foreground mb-6" />
+        <h1 className="text-2xl font-bold mb-2">Error al cargar los pedidos</h1>
+        <p className="text-muted-foreground mb-8">{fetchError}</p>
+        <Button onClick={() => setRetryKey((k) => k + 1)} variant="outline">
+          Reintentar
+        </Button>
+      </div>
+    );
+  }
+
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
   };
@@ -133,7 +126,7 @@ export default function OrdersPage() {
     <div className="space-y-8">
       <h1 className="text-3xl font-bold">Mis Pedidos</h1>
 
-      {MOCK_ORDERS.length === 0 ? (
+      {orders.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <ShoppingBag className="h-20 w-20 text-muted-foreground mb-4" />
           <h2 className="text-xl font-semibold mb-2">No tienes pedidos</h2>
@@ -144,7 +137,7 @@ export default function OrdersPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {MOCK_ORDERS.map((order) => (
+          {orders.map((order) => (
             <Card key={order.id}>
               <div
                 className="p-4 cursor-pointer select-none"
@@ -161,7 +154,7 @@ export default function OrdersPage() {
                     </button>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold">{order.orderNumber}</p>
-                      <p className="text-sm text-muted-foreground">{cnFormat(order.date)}</p>
+                      <p className="text-sm text-muted-foreground">{cnFormat(order.createdAt)}</p>
                     </div>
                     <div className="hidden sm:flex items-center gap-2">
                       <Badge variant="secondary">{typeLabel[order.type]}</Badge>
@@ -183,7 +176,7 @@ export default function OrdersPage() {
                   {order.items.map((item) => (
                     <div key={item.id} className="flex items-center justify-between text-sm">
                       <span>{item.name} <span className="text-muted-foreground">x{item.quantity}</span></span>
-                      <span className="font-medium">{formatPrice(item.price * item.quantity)}</span>
+                      <span className="font-medium">{formatPrice(item.totalPrice)}</span>
                     </div>
                   ))}
                 </CardContent>
