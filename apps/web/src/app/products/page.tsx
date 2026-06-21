@@ -7,7 +7,7 @@ import { RefreshCw, PackageOpen, SlidersHorizontal, Search, ImageOff } from 'luc
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatPrice } from '@/lib/utils';
-import { MOCK_PRODUCTS, type MockProduct } from '@/lib/mock-products';
+import type { MockProduct } from '@/lib/mock-products';
 
 const ITEMS_PER_PAGE = 9;
 const SORT_OPTIONS = [
@@ -78,9 +78,8 @@ function ProductsPageContent() {
         const data = await res.json();
         const list = data.products ?? data.data ?? data;
         setAllProducts(Array.isArray(list) ? list : []);
-      } catch {
-        setAllProducts(MOCK_PRODUCTS);
-        setError('No se pudieron cargar los productos desde el servidor.');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Error al cargar los productos');
       } finally {
         setIsLoading(false);
       }
