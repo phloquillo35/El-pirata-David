@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Query, Body, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Query, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { CreateOrderDTO, UpdateOrderStatusDTO } from './dto/order.dto';
@@ -59,13 +59,22 @@ export class OrdersController {
     });
   }
 
+  @Get('admin/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Admin get order detail' })
+  async findByIdAdmin(@Param('id') id: string) {
+    return this.ordersService.findByIdAdmin(id);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get order by ID' })
   async findById(
     @CurrentUser('id') userId: string,
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
   ) {
     return this.ordersService.findById(id, userId);
   }
@@ -87,7 +96,7 @@ export class OrdersController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin update order status' })
   async updateStatus(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Body() data: UpdateOrderStatusDTO,
   ) {
     return this.ordersService.updateStatus(id, data.status, data.description);
@@ -99,7 +108,7 @@ export class OrdersController {
   @ApiOperation({ summary: 'Cancel own order' })
   async cancelOrder(
     @CurrentUser('id') userId: string,
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
   ) {
     return this.ordersService.cancelOrder(id, userId);
   }
@@ -108,7 +117,7 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get order tracking' })
-  async getTracking(@Param('id', ParseUUIDPipe) id: string) {
+  async getTracking(@Param('id') id: string) {
     return this.ordersService.getTracking(id);
   }
 }

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import * as path from 'path';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -11,6 +12,7 @@ import { CartModule } from './modules/cart/cart.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { AddressesModule } from './modules/addresses/addresses.module';
 import { AiRequestsModule } from './modules/ai-requests/ai-requests.module';
+import { HealthModule } from './modules/health/health.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { AdminModule } from './modules/admin/admin.module';
 
@@ -18,7 +20,7 @@ import { AdminModule } from './modules/admin/admin.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env.local', '.env'],
+      envFilePath: ['.env.local', '.env', path.resolve(__dirname, '../../.env')],
     }),
     ThrottlerModule.forRoot([
       {
@@ -36,6 +38,7 @@ import { AdminModule } from './modules/admin/admin.module';
     PaymentsModule,
     AddressesModule,
     AiRequestsModule,
+    HealthModule,
     UploadModule,
     AdminModule,
   ],

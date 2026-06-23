@@ -3,8 +3,7 @@ import { Inter, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
 import { CartProvider } from '@/lib/cart-context';
-import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
+import { LayoutClient } from '@/components/layout/LayoutClient';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -39,9 +38,7 @@ export default function RootLayout({
       <body className={`${inter.variable} ${playfair.variable} min-h-screen flex flex-col`}>
         <AuthProvider>
           <CartProvider>
-            <Header />
-            <main className="flex-1">{children}</main>
-            <Footer />
+            <LayoutClient>{children}</LayoutClient>
           </CartProvider>
         </AuthProvider>
       </body>

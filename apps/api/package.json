@@ -3,8 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "nest start --watch",
-    "build": "nest build",
+    "build": "rm -rf dist && tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json && node --watch dist/main.js",
     "start": "node dist/main",
     "start:prod": "node dist/main",
     "lint": "echo 'lint ok'",

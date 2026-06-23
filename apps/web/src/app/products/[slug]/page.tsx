@@ -35,6 +35,10 @@ export default function ProductDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
+  const { addItem } = useCart();
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [addSuccess, setAddSuccess] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -116,11 +120,6 @@ export default function ProductDetailPage() {
       </div>
     );
   }
-
-  const { addItem } = useCart();
-  const [isAddingToCart, setIsAddingToCart] = useState(false);
-  const [addSuccess, setAddSuccess] = useState(false);
-  const [addError, setAddError] = useState<string | null>(null);
 
   async function handleAddToCart() {
     setAddError(null);

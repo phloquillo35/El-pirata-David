@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, Query, Body, UseGuards, ParseUUIDPipe, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Query, Body, UseGuards, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AiRequestsService } from './ai-requests.service';
 import { CreateLinkRequestDTO, ReviewAIRequestDTO } from './dto/ai-request.dto';
@@ -74,7 +74,7 @@ export class AiRequestsController {
   async findById(
     @CurrentUser('id') userId: string,
     @CurrentUser('role') userRole: UserRole,
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
   ) {
     const request = await this.aiRequestsService.findById(id);
 
@@ -90,7 +90,7 @@ export class AiRequestsController {
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Trigger AI analysis of the product URL' })
-  async analyze(@Param('id', ParseUUIDPipe) id: string) {
+  async analyze(@Param('id') id: string) {
     return this.aiRequestsService.analyzeWithAI(id);
   }
 
@@ -99,7 +99,7 @@ export class AiRequestsController {
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Find product alternatives in local DB' })
-  async findAlternatives(@Param('id', ParseUUIDPipe) id: string) {
+  async findAlternatives(@Param('id') id: string) {
     return this.aiRequestsService.findAlternatives(id);
   }
 
@@ -109,7 +109,7 @@ export class AiRequestsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin review AI request' })
   async review(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @CurrentUser('id') adminId: string,
     @Body() body: ReviewAIRequestDTO,
   ) {
@@ -121,7 +121,7 @@ export class AiRequestsController {
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete AI request' })
-  async delete(@Param('id', ParseUUIDPipe) id: string) {
+  async delete(@Param('id') id: string) {
     return this.aiRequestsService.delete(id);
   }
 }

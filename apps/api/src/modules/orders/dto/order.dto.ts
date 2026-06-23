@@ -1,11 +1,11 @@
-import { IsString, IsOptional, IsArray, ValidateNested, ArrayMinSize, Min, MinLength as MinLen, MaxLength as MaxLen, IsUUID, IsInt, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsArray, ValidateNested, ArrayMinSize, Min, MinLength as MinLen, MaxLength as MaxLen, IsInt, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { OrderStatus } from '@prisma/client';
 
 export class CreateOrderItemDTO {
   @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
-  @IsUUID()
+  @IsString()
   productId: string;
 
   @ApiProperty({ example: 1 })
@@ -23,7 +23,7 @@ export class CreateOrderDTO {
   items: CreateOrderItemDTO[];
 
   @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
-  @IsUUID()
+  @IsString()
   shippingAddressId: string;
 
   @ApiPropertyOptional({ example: 'Leave at the door' })

@@ -67,10 +67,18 @@ export default function CheckoutPage() {
         quantity: item.quantity,
       }));
 
-      const order = await api.post<{ orderNumber: string }>('/orders', {
+      const order = await api.post<any>('/orders', {
         items: orderItems,
         shippingAddressId: createdAddress.id,
       });
+
+      if (paymentMethod === 'mercado_pago') {
+        const preference = await api.post<{ initPoint: string }>(
+          `/payments/mercado-pago/create/${order.id}`
+        );
+        window.location.href = preference.initPoint;
+        return;
+      }
 
       await clearCart();
       setOrderNumber(order.orderNumber);

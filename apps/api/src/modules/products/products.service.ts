@@ -33,12 +33,16 @@ export class ProductsService {
     sortBy?: string;
     page?: number;
     limit?: number;
+    showInactive?: boolean;
   }) {
     const page = filters.page || 1;
     const limit = Math.min(filters.limit || 20, 100);
     const skip = (page - 1) * limit;
 
-    const where: Prisma.ProductWhereInput = { isActive: true };
+    const where: Prisma.ProductWhereInput = {};
+    if (!filters.showInactive) {
+      where.isActive = true;
+    }
 
     if (filters.search) {
       where.OR = [

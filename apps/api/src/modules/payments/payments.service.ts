@@ -46,7 +46,9 @@ export class PaymentsService {
         initPoint: preference.init_point,
       };
     } catch (error) {
-      throw new BadRequestException('Failed to create MercadoPago preference');
+      console.error('MercadoPago preference creation failed:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      throw new BadRequestException(`Error al crear preferencia MP: ${message}`);
     }
   }
 

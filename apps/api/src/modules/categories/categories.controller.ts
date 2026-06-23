@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDTO, UpdateCategoryDTO } from './dto/category.dto';
@@ -38,7 +38,7 @@ export class CategoriesController {
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a category (Admin)' })
-  async update(@Param('id', ParseUUIDPipe) id: string, @Body() data: UpdateCategoryDTO) {
+  async update(@Param('id') id: string, @Body() data: UpdateCategoryDTO) {
     return this.categoriesService.update(id, data);
   }
 
@@ -47,7 +47,7 @@ export class CategoriesController {
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Soft delete a category (Admin)' })
-  async delete(@Param('id', ParseUUIDPipe) id: string) {
+  async delete(@Param('id') id: string) {
     return this.categoriesService.delete(id);
   }
 }

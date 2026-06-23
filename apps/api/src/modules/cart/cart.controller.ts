@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CartService } from './cart.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -40,7 +40,7 @@ export class CartController {
   @ApiOperation({ summary: 'Remove item from cart' })
   removeItem(
     @CurrentUser('id') userId: string,
-    @Param('productId', ParseUUIDPipe) productId: string,
+    @Param('productId') productId: string,
   ) {
     return this.cartService.removeItem(userId, productId);
   }

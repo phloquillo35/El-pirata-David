@@ -49,4 +49,7 @@ async function bootstrap() {
   logger.log(`Swagger docs at http://localhost:${port}/api/docs`);
 }
 
-void bootstrap();
+bootstrap().catch((err) => {
+  console.error('BOOTSTRAP FAILED:', err);
+  process.exit(1);
+});

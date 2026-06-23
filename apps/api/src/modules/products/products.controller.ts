@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Query, Body, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Query, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { ProductsService } from './products.service';
 import { CreateProductDTO, UpdateProductDTO } from './dto/product.dto';
@@ -33,6 +33,7 @@ export class ProductsController {
     @Query('sortBy') sortBy?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('showInactive') showInactive?: string,
   ) {
     return this.productsService.findAll({
       search,
@@ -44,6 +45,7 @@ export class ProductsController {
       sortBy,
       page: page ? parseInt(page, 10) : undefined,
       limit: limit ? parseInt(limit, 10) : undefined,
+      showInactive: showInactive === 'true',
     });
   }
 
@@ -78,7 +80,7 @@ export class ProductsController {
 
   @Get('id/:id')
   @ApiOperation({ summary: 'Get product by ID' })
-  async findById(@Param('id', ParseUUIDPipe) id: string) {
+  async findById(@Param('id') id: string) {
     return this.productsService.findById(id);
   }
 
@@ -96,7 +98,7 @@ export class ProductsController {
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a product (Admin)' })
-  async update(@Param('id', ParseUUIDPipe) id: string, @Body() data: UpdateProductDTO) {
+  async update(@Param('id') id: string, @Body() data: UpdateProductDTO) {
     return this.productsService.update(id, data);
   }
 
@@ -105,7 +107,7 @@ export class ProductsController {
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Soft delete a product (Admin)' })
-  async delete(@Param('id', ParseUUIDPipe) id: string) {
+  async delete(@Param('id') id: string) {
     return this.productsService.delete(id);
   }
 }

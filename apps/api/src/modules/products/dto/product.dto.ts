@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional, IsBoolean, Min, Max, IsArray, ValidateNested, ArrayMinSize, MinLength, MaxLength, IsUUID, IsInt } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsOptional, IsBoolean, Min, Max, IsArray, ValidateNested, ArrayMinSize, MinLength, MaxLength, IsInt } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -116,8 +116,14 @@ export class CreateProductDTO {
   @IsBoolean()
   isFeatured?: boolean;
 
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+
   @ApiProperty({ example: 'uuid-category-id' })
-  @IsUUID()
+  @IsString()
+  @IsNotEmpty()
   categoryId: string;
 
   @ApiPropertyOptional({ example: 'SEO Title' })
@@ -246,7 +252,7 @@ export class UpdateProductDTO {
 
   @ApiPropertyOptional({ example: 'uuid-category-id' })
   @IsOptional()
-  @IsUUID()
+  @IsString()
   categoryId?: string;
 
   @ApiPropertyOptional({ example: 'SEO Title' })

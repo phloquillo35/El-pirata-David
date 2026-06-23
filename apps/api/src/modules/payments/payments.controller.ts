@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
 import { MercadoPagoWebhookDTO, ConfirmTransferDTO } from './dto/payment.dto';
@@ -16,7 +16,7 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create MercadoPago payment preference' })
-  async createMercadoPagoPreference(@Param('orderId', ParseUUIDPipe) orderId: string) {
+  async createMercadoPagoPreference(@Param('orderId') orderId: string) {
     return this.paymentsService.createMercadoPagoPreference(orderId);
   }
 
@@ -30,7 +30,7 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create bank transfer payment' })
-  async createBankTransfer(@Param('orderId', ParseUUIDPipe) orderId: string) {
+  async createBankTransfer(@Param('orderId') orderId: string) {
     return this.paymentsService.createBankTransfer(orderId);
   }
 
@@ -47,7 +47,7 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get payment by order ID' })
-  async getPaymentByOrder(@Param('orderId', ParseUUIDPipe) orderId: string) {
+  async getPaymentByOrder(@Param('orderId') orderId: string) {
     return this.paymentsService.getPaymentByOrder(orderId);
   }
 }

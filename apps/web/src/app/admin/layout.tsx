@@ -113,6 +113,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <p className="text-xs text-muted-foreground truncate">{user.email}</p>
               </div>
             </div>
+            <Button variant="ghost" size="sm" className="w-full mb-2" asChild>
+              <Link href="/">
+                ← Ir a la Tienda
+              </Link>
+            </Button>
             <Button variant="outline" size="sm" className="w-full" onClick={logout}>
               <LogOut className="h-4 w-4 mr-2" />
               Cerrar Sesión

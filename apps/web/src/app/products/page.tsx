@@ -9,6 +9,12 @@ import { Input } from '@/components/ui/input';
 import { formatPrice } from '@/lib/utils';
 import type { MockProduct } from '@/lib/mock-products';
 
+const getCategoryName = (cat: unknown): string =>
+  typeof cat === 'string' ? cat : (cat as any)?.name || '';
+
+const getProductImage = (p: any): string | undefined =>
+  typeof p.image === 'string' ? p.image : p.images?.[0]?.url;
+
 const ITEMS_PER_PAGE = 9;
 const SORT_OPTIONS = [
   { value: '', label: 'Ordenar' },
@@ -19,13 +25,14 @@ const SORT_OPTIONS = [
   { value: 'newest', label: 'Nuevos primero' },
 ] as const;
 
-function ProductImage({ product }: { product: MockProduct }) {
+function ProductImage({ product }: { product: any }) {
   const [imageError, setImageError] = useState(false);
+  const imgSrc = getProductImage(product);
 
-  if (product.image && !imageError) {
+  if (imgSrc && !imageError) {
     return (
       <img
-        src={product.image}
+        src={imgSrc}
         alt={product.name}
         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
         onError={() => setImageError(true)}
@@ -96,7 +103,7 @@ function ProductsPageContent() {
 
     if (categoryParam) {
       result = result.filter(
-        (p) => p.categoryId === categoryParam || p.category.toLowerCase() === categoryParam.toLowerCase(),
+        (p) => p.categoryId === categoryParam || getCategoryName(p.category).toLowerCase() === categoryParam.toLowerCase(),
       );
     }
 
@@ -105,7 +112,7 @@ function ProductsPageContent() {
       result = result.filter(
         (p) =>
           p.name.toLowerCase().includes(q) ||
-          p.category.toLowerCase().includes(q) ||
+          getCategoryName(p.category).toLowerCase().includes(q) ||
           p.brand?.toLowerCase().includes(q) ||
           p.description.toLowerCase().includes(q),
       );
@@ -156,7 +163,7 @@ function ProductsPageContent() {
         <div>
           <h1 className="text-4xl md:text-5xl font-bold tracking-tighter">
             {categoryParam
-              ? allProducts.find((p) => p.categoryId === categoryParam)?.category || 'Productos'
+              ? getCategoryName(allProducts.find((p) => p.categoryId === categoryParam)?.category) || 'Productos'
               : 'Productos'}
           </h1>
           <p className="text-sm text-muted-foreground mt-2">
@@ -219,7 +226,7 @@ function ProductsPageContent() {
                 </div>
                 <div className="px-1 space-y-1">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                    {product.category}
+                    {getCategoryName(product.category)}
                   </p>
                   <h3 className="text-sm font-medium leading-snug group-hover:opacity-60 transition-opacity">
                     {product.name}
